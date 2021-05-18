@@ -1,7 +1,7 @@
 # Substack Newsletter category scraper
 Substack homepage category scraper
 
-Substack lists newsletters by category on its homepage. 
+[Substack](https://substack.com/) lists newsletters by category on its homepage. 
 
 `subscrape.py` will scrape the name and associated information from each listed newsletter.
 
