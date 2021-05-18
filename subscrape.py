@@ -130,11 +130,12 @@ def get_publications(container, category, ranking_toggle):
     pub_elements = container.find_elements_by_css_selector(publication_card_css_selector)
 
     pub_list = []
-
-    for pub_element in pub_elements:
-        pub_dict = pub_to_dict(pub_element, category, ranking_toggle)
-        pub_list.append(pub_dict)  
-    
+    try:
+        for pub_element in pub_elements:
+            pub_dict = pub_to_dict(pub_element, category, ranking_toggle)
+            pub_list.append(pub_dict)  
+    except Exception as e:
+        raise e    
 
     return pub_list
 
@@ -162,7 +163,7 @@ class SubmitChanged(object):
 def traverse_substack(browser):
 
     
-    substack_df = pd.DataFrame(columns = ['category', 'pub_name', 'pub_link', 'author', 'launch_date', 'num_subs', 'sub_rate'])
+    substack_df = pd.DataFrame(columns = ['category', 'top_paid', 'pub_name', 'pub_link', 'author', 'launch_date', 'num_subs', 'sub_rate'])
 
 
     #Step 1: set content container
