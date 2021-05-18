@@ -3,6 +3,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
+import time
 import re
 import pandas as pd
 
@@ -24,7 +25,7 @@ publication_card_css_selector = 'a.publication'
 
 def pub_to_dict(pub_element, category, ranking_toggle):
     
-    # print(category)
+   
 
     pub_name = pub_element.find_element_by_css_selector("div.publication-title").text
     pub_link = pub_element.get_attribute('href')
@@ -122,7 +123,8 @@ def get_publications(container, category, ranking_toggle):
             view_more_button.click()
         except:
             view_more = False
-
+    
+    time.sleep(0.01)
 
     #Now that we have all the publications available grab them and turn them into a list of dicts
     pub_elements = container.find_elements_by_css_selector(publication_card_css_selector)
