@@ -5,7 +5,7 @@ Substack homepage category scraper
 
 `subscrape.py` will scrape the name and associated information from each listed newsletter.
 
-The results are saved in a `**_output.csv` file. 
+The results are saved in a `YYYY-MM-DD_HHMM_output.csv` file. 
 
 Example:
 
