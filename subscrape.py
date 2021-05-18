@@ -1,8 +1,9 @@
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.expected_conditions import _find_element
-import time
+from selenium.webdriver.support import expected_conditions as EC
+from datetime import datetime
+import re
 import pandas as pd
 
 #C apture all the publications under each of the categories.
@@ -28,7 +29,7 @@ def pub_to_dict(pub_element, category, ranking_toggle):
     pub_name = pub_element.find_element_by_css_selector("div.publication-title").text
     pub_link = pub_element.get_attribute('href')
 
-    print(pub_name)
+    # print(pub_name)
 
     
     #Parse and clean publication author and date
@@ -36,6 +37,7 @@ def pub_to_dict(pub_element, category, ranking_toggle):
     
 
     if ranking_toggle == "All":
+        top_paid = False
         if len(pub_info.split("·")) == 2: 
             pub_author = pub_info.split("·")[0]
             pub_author = pub_author.replace("by", "")
@@ -54,6 +56,7 @@ def pub_to_dict(pub_element, category, ranking_toggle):
         sub_rate = ""
 
     elif ranking_toggle == "Top paid":
+        top_paid = True
         if len(pub_info.split("·")) == 3:
             pub_author = pub_info.split("·")[0]
             pub_author = pub_author.replace("by", "")
@@ -98,6 +101,7 @@ def pub_to_dict(pub_element, category, ranking_toggle):
 
     pub_dict = {
         'category': category, 
+        'top_paid': top_paid,
         'pub_name':  pub_name,
         'pub_link': pub_link, 
         'author': pub_author, 
@@ -109,8 +113,6 @@ def pub_to_dict(pub_element, category, ranking_toggle):
     return pub_dict
 
 def get_publications(container, category, ranking_toggle):
-
-    
 
     #First, we need to smash the view-more button until we can't anymore to get the full list of publications
     view_more = True
@@ -176,6 +178,10 @@ def traverse_substack(browser):
     # Step 4: Set ranking toggle to "Top paid" for first scrape pass
     ranking_toggle = None
     cat_buttons[0].click() 
+
+    ranking_toggle_wait = WebDriverWait(browser, 3)
+    ranking_toggle_wait.until(EC.presence_of_element_located((By.CLASS_NAME,ranking_toggle_div_class)))
+
     ranking_toggle_div = container.find_element_by_class_name(ranking_toggle_div_class)
     ranking_links = ranking_toggle_div.find_elements_by_tag_name("a")
     for ranking_link in ranking_links:
@@ -186,15 +192,12 @@ def traverse_substack(browser):
     # Step 5: Iterate through each category and scrape publications
     # (ignore Featured as the info will be repetitive)
     for cat_button in cat_buttons:
-        
-    
-       
+
         test = SubmitChanged(browser.find_element_by_xpath("/html/body/div[1]/div/div[3]/div/div[2]/div[1]/div[2]/a[1]/div[2]/div[2]/div[1]"), "/html/body/div[1]/div/div[3]/div/div[2]/div[1]/div[2]/a[1]/div[2]/div[2]/div[1]")    
 
         # Nav to category page
         cat_button.click()
-        try:
-            
+        try:  
             wait = WebDriverWait(browser, 4)
             wait.until(test)
         except:
@@ -233,9 +236,10 @@ def traverse_substack(browser):
         
     
         test = SubmitChanged(browser.find_element_by_xpath("/html/body/div[1]/div/div[3]/div/div[2]/div[1]/div[2]/a[1]/div/div[2]/div[1]"), "/html/body/div[1]/div/div[3]/div/div[2]/div[1]/div[2]/a[1]/div/div[2]/div[1]")    
+        
+        # Nav to category page
         cat_button.click() 
         try:
-        # Nav to category page
             wait = WebDriverWait(browser, 3)
             wait.until(test)
         except:
@@ -246,7 +250,7 @@ def traverse_substack(browser):
         list_of_publications = get_publications(container, cat_button.text, ranking_toggle)
 
         #Iterate through each new publication added. If pub is already in substack_df, add just launch date. If not, append whole thing
-        count = 0
+      
         for pub_dict in list_of_publications:
            
             matching_index =  match_pub_row(comp_substack_df, pub_dict)
@@ -254,27 +258,14 @@ def traverse_substack(browser):
             if matching_index.size > 0:
                 # print("Match")
                 substack_df.loc[matching_index,['launch_date']] = pub_dict['launch_date']
-                count = count + 1
+          
                 
             else: 
                 substack_df = substack_df.append(pub_dict, ignore_index=True)
                 # print("No Match")
-                
-        
-      
-        # substack_df = substack_df.append(list_of_publications, ignore_index=True)
-        
-        print(count)
-
-       
-
-        # break
-
-      
-    
-    
+                    
     return substack_df
-    #For each category,  
+
 
 
 
@@ -283,5 +274,7 @@ if __name__ == '__main__':
     browser = webdriver.Firefox()
     browser.get("https://substack.com/home")
     substack_df = traverse_substack(browser)
-    substack_df.to_csv("subscrape.csv", index=False)
+
+    file_prefix = re.sub(r'\..*', '', str(datetime.now()).replace(' ', '_')).replace(':', '')[:-2]
+    substack_df.to_csv(f"{file_prefix}_output.csv", index=False)
     browser.quit()
