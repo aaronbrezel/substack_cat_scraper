@@ -23,11 +23,14 @@ view_more_button_xpath = "/html/body/div[1]/div/div[3]/div/div[2]/div[1]/div[3]/
 
 publication_card_css_selector = 'a.publication'
 
-def pub_to_dict(pub_element, category, ranking_toggle):
+def pub_to_dict(browser, pub_element, category, ranking_toggle):
     
-   
+    # WebDriverWait(browser, 0.3).until(EC.visibility_of_element_located((By.CSS_SELECTOR, "div.publication-title")))
+
 
     pub_name = pub_element.find_element_by_css_selector("div.publication-title").text
+    # print(pub_name)
+  
     pub_link = pub_element.get_attribute('href')
 
     # print(pub_name)
@@ -113,29 +116,49 @@ def pub_to_dict(pub_element, category, ranking_toggle):
 
     return pub_dict
 
-def get_publications(container, category, ranking_toggle):
+def get_publications(browser, container, category, ranking_toggle):
 
     #First, we need to smash the view-more button until we can't anymore to get the full list of publications
     view_more = True
     while view_more:
         try:
+            #Need to add a wait here untill the view more button loads
+            WebDriverWait(browser, 1).until(EC.visibility_of_element_located((By.XPATH, view_more_button_xpath)))
             view_more_button = container.find_element_by_xpath(view_more_button_xpath)
             view_more_button.click()
         except:
             view_more = False
     
-    time.sleep(0.01)
+    
 
-    #Now that we have all the publications available grab them and turn them into a list of dicts
-    pub_elements = container.find_elements_by_css_selector(publication_card_css_selector)
 
-    pub_list = []
-    try:
-        for pub_element in pub_elements:
-            pub_dict = pub_to_dict(pub_element, category, ranking_toggle)
-            pub_list.append(pub_dict)  
-    except Exception as e:
-        raise e    
+
+    pulling_pubs = True
+    pulling_pubs_try_count = 0
+    while pulling_pubs:
+        try:
+            pulling_pubs_try_count = pulling_pubs_try_count + 1
+            #Now that we have all the publications available grab them and turn them into a list of dicts
+            pub_elements = container.find_elements_by_css_selector(publication_card_css_selector)
+
+            pub_list = []
+    
+            for pub_element in pub_elements:
+                pub_dict = pub_to_dict(browser, pub_element, category, ranking_toggle)
+                pub_list.append(pub_dict)  
+            pulling_pubs = False
+            print("SUCCESS")
+       
+        except Exception as e:
+            print(e)
+            print("trying again")
+
+        if pulling_pubs_try_count > 5:
+            print("Tried five times. Giving up")
+            pub_list = []
+            break
+    if not pub_list:
+        raise Exception("Error pulling pub list")
 
     return pub_list
 
@@ -208,7 +231,7 @@ def traverse_substack(browser):
         
 
         #Scrape publications into list of dicts
-        list_of_publications = get_publications(container, cat_button.text, ranking_toggle)
+        list_of_publications = get_publications(browser, container, cat_button.text, ranking_toggle)
         
         #Append list of dicts to dataframe
         substack_df = substack_df.append(list_of_publications, ignore_index=True)
@@ -250,7 +273,7 @@ def traverse_substack(browser):
         
 
         #Scrape publications into list of dicts
-        list_of_publications = get_publications(container, cat_button.text, ranking_toggle)
+        list_of_publications = get_publications(browser, container, cat_button.text, ranking_toggle)
 
         #Iterate through each new publication added. If pub is already in substack_df, add just launch date. If not, append whole thing
       
